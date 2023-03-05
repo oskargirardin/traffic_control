@@ -3,12 +3,13 @@ import numpy as np
 import os
 import time
 import sys
+import TrafficControlContent
 
     
 if __name__ == "__main__":
     # initiate environment
-    print(gym.envs.registry.keys())
-    env = gym.make('traffic_control_v0')
+    #print(gym.envs.registry.keys())
+    env = gym.make("traffic_control-v0")
     #obs = env.reset()
 
     # iterate
