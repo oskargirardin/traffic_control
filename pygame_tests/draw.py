@@ -48,16 +48,21 @@ def draw_background(display):
     #pygame.draw.line(display , Setup.WHITE, (center_x+dist_center, center_y-dist_center), (center_x+dist_center, center_y), width = 1)
 
 
-def draw_lights(display, green_top, green_right, green_bottom, green_left):
+def draw_lights(display, lights_dict):
     # Top light
     #col_top = Setup.GREEN if green_top else Setup.RED
     #pygame.draw.rect(display, )
-    dist_center = Setup.ROAD_WIDTH//2
-    center_y = Setup.HEIGHT//2
-    center_x = Setup.WIDTH//2
+    dist_center = Setup.DIST_CENTER
+    center_y = Setup.CENTER_Y
+    center_x = Setup.CENTER_X
     # Stop lines
-    pygame.draw.line(display , Setup.GREEN if green_top else Setup.RED, (center_x-dist_center, center_y-dist_center), (center_x, center_y-dist_center), width = 1)
-    pygame.draw.line(display , Setup.GREEN if green_left else Setup.RED, (center_x-dist_center, center_y+dist_center), (center_x-dist_center, center_y), width = 1)
-    pygame.draw.line(display , Setup.GREEN if green_bottom else Setup.RED, (center_x+dist_center, center_y+dist_center), (center_x, center_y+dist_center), width = 1)
-    pygame.draw.line(display , Setup.GREEN if green_right else Setup.RED, (center_x+dist_center, center_y-dist_center), (center_x+dist_center, center_y), width = 1)
+    pygame.draw.line(display , Setup.GREEN if lights_dict["down"] else Setup.RED, (center_x-dist_center, center_y-dist_center), (center_x, center_y-dist_center), width = 1)
+    pygame.draw.line(display , Setup.GREEN if lights_dict["right"] else Setup.RED, (center_x-dist_center, center_y+dist_center), (center_x-dist_center, center_y), width = 1)
+    pygame.draw.line(display , Setup.GREEN if lights_dict["up"] else Setup.RED, (center_x+dist_center, center_y+dist_center), (center_x, center_y+dist_center), width = 1)
+    pygame.draw.line(display , Setup.GREEN if lights_dict["left"] else Setup.RED, (center_x+dist_center, center_y-dist_center), (center_x+dist_center, center_y), width = 1)
 
+
+
+def draw_score(display, score, font, color):
+    text_surface = font.render(f"Score: {score}", True, color)
+    display.blit(text_surface, (50, 50))
