@@ -62,7 +62,9 @@ def draw_lights(display, lights_dict):
     pygame.draw.line(display , Setup.GREEN if lights_dict["left"] else Setup.RED, (center_x+dist_center, center_y-dist_center), (center_x+dist_center, center_y), width = 1)
 
 
+def draw_text(display, text, font, pos, color):
+    text_surface = font.render(text, True, color)
+    display.blit(text_surface, pos)
 
 def draw_score(display, score, font, color):
-    text_surface = font.render(f"Score: {score}", True, color)
-    display.blit(text_surface, (50, 50))
+    draw_text(display, f"Score: {score}", font, (50,50), color)

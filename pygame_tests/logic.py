@@ -86,4 +86,10 @@ class Game:
 
     def update_interval(self, iter_count, fun):
         return int(fun(iter_count))
+    
+    def cars_on_screen(self, display):
+        for _, cars in self.cars_dict.items():
+            if cars.has():
+                return True
+        return False
 
