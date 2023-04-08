@@ -18,7 +18,7 @@ T = 2000
 cars_fun = [Setup.cos_fun(100, T,0, 130),Setup.cos_fun(100, T,500, 130), Setup.cos_fun(100, T,1000, 130), Setup.cos_fun(100, T,1500, 130)]
 iter_left = [fun(0) for fun in cars_fun]
 dirs = ["left", "down", "right", "up"]
-n_cars_per_round = 100
+n_cars_per_round = 5
 num_cars = 0
 round_done = False
 # Initialize game
@@ -63,8 +63,9 @@ while running:
 
     if num_cars >= n_cars_per_round:
         round_done = True
-    if round_done and not my_game.cars_on_screen(window):
-        draw_text(window, "Round done!", Setup.geneva50, (Setup.CENTER_X, Setup.CENTER_Y), Setup.BLACK)
+
+    if round_done and (not my_game.cars_on_screen()):
+        running = False
 
     pygame.display.update() # Update the screen
     

@@ -18,7 +18,7 @@ class Setup:
     RED = (255, 0, 0)
 
     # Width road
-    ROAD_WIDTH = WIDTH//8
+    ROAD_WIDTH = WIDTH//10
     DIST_CENTER = ROAD_WIDTH//2
     CENTER_Y = HEIGHT//2
     CENTER_X = WIDTH//2

@@ -103,7 +103,7 @@ class Game:
     
     def cars_on_screen(self):
         for _, cars in self.cars_dict.items():
-            if cars.has():
+            if len(cars) > 0:
                 return True
         return False
 

@@ -38,20 +38,23 @@ class Car(pygame.sprite.Sprite):
 
     def __init__(self, 
                  direction = "down",
-                 width = 10,
-                 height = 10,
+                 width = 20,
+                 height = 20,
                  speed = 0.1):
         super().__init__()
         self.direction = direction
-        self.moving, self.pos = get_movement(direction, width/2, height/2)
+        self.moving, self.pos = get_movement(direction, width//4, height//4)
         self.width = width
         self.height = height
         self.speed = speed
         self.driving = True
         self.rect = pygame.rect.Rect(self.pos.x, self.pos.y, self.width, self.height)
+        self.image = pygame.transform.scale(pygame.image.load("../img/car.png"), (self.width//2, self.width))
+        angles = {"up": 0, "down": 180, "left": 90, "right": 270}
+        self.image = pygame.transform.rotate(self.image, angles[self.direction])
 
     def get_rect(self):
-        self.rect = pygame.rect.Rect(self.pos.x, self.pos.y, self.width, self.height)
+        self.rect = pygame.rect.Rect(self.pos.x, self.pos.y, self.width, self.height) # Needed?
         return self.rect
 
     def move(self, dt):
@@ -64,9 +67,10 @@ class Car(pygame.sprite.Sprite):
     def go(self):
         self.driving = True
 
-    def draw(self, surface):
+    def draw(self, surface: pygame.display):
         rect = self.get_rect()
-        pygame.draw.rect(surface, Setup.BLACK, rect=rect, border_radius=min(self.height, self.width) // 2)
+        surface.blit(self.image, rect)
+        #pygame.draw.rect(surface, Setup.BLACK, rect=rect, border_radius=min(self.height, self.width) // 2)
     
     def is_at_light(self):
         return pygame.Rect.colliderect(self.get_rect(), Setup.STOP_ZONES[self.direction])
