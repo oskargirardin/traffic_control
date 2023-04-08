@@ -68,3 +68,11 @@ def draw_text(display, text, font, pos, color):
 
 def draw_score(display, score, font, color):
     draw_text(display, f"Score: {score}", font, (50,50), color)
+
+
+def draw(display, lights_dict, score, num_cars):
+    display.fill(Setup.GREY) # Fill the screen with black
+    draw_background(display)
+    draw_lights(display, lights_dict)
+    draw_score(display, score, Setup.geneva50, Setup.BLACK)
+    draw_text(display, f"Cars past: {num_cars}", Setup.geneva50, (50, 100), Setup.BLACK)

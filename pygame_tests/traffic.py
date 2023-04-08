@@ -21,10 +21,11 @@ dirs = ["left", "down", "right", "up"]
 n_cars_per_round = 100
 num_cars = 0
 round_done = False
-# A car
+# Initialize game
 my_game = Game()
 # Clock
 clock = pygame.time.Clock()
+
 # Game loop
 running = True
 while running:
@@ -52,40 +53,19 @@ while running:
                 my_game.switch_light("right")
             if event.key == pygame.K_DOWN:
                 my_game.switch_light("down")
-            if event.key == pygame.K_a:
-                my_game.add_car("left")
-            if event.key == pygame.K_w:
-                my_game.add_car("up")
-            if event.key == pygame.K_s:
-                my_game.add_car("down")
-            if event.key == pygame.K_d:
-                my_game.add_car("right")
-
-    # Add cars
-
 
     # Update game state
-    my_game.move_cars(dt)
-    my_game.check_lights()
-    my_game.stop_behind_car()
-    if my_game.check_crash():
-        score = 0
-    score = my_game.update_score(score)
+    score = my_game.update_logic(dt, score)
+
     # Draw everything
-    window.fill(Setup.GREY) # Fill the screen with black
-    # Add additional drawing code here
-    draw_background(window)
-    draw_lights(window, my_game.lights_dict)
-    # Draw car
+    draw(window, my_game.lights_dict, score, num_cars)
     my_game.draw_cars(window)
-    # Draw score
-    draw_score(window, score, Setup.geneva50, Setup.BLACK)
-    # Print num of cars past
-    draw_text(window, f"Cars past: {num_cars}", Setup.geneva50, (50, 100), Setup.BLACK)
+
     if num_cars >= n_cars_per_round:
         round_done = True
     if round_done and not my_game.cars_on_screen(window):
         draw_text(window, "Round done!", Setup.geneva50, (Setup.CENTER_X, Setup.CENTER_Y), Setup.BLACK)
+
     pygame.display.update() # Update the screen
     
 # Quit Pygame

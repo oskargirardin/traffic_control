@@ -83,11 +83,25 @@ class Game:
                     car_group.remove(car)
                     score += 1
         return score
+    
+
+    def update_logic(self, dt, score):
+        """
+        Wrapper function to make all game updates
+        """
+        self.move_cars(dt)
+        self.check_lights()
+        self.stop_behind_car()
+        if self.check_crash():
+            score = 0
+        score = self.update_score(score)
+        return score
+
 
     def update_interval(self, iter_count, fun):
         return int(fun(iter_count))
     
-    def cars_on_screen(self, display):
+    def cars_on_screen(self):
         for _, cars in self.cars_dict.items():
             if cars.has():
                 return True
