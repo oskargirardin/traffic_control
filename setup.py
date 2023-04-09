@@ -1,0 +1,30 @@
+import setuptools
+
+setuptools.setup(name='TrafficControl',
+      version='0.1.0',
+      author='Oskar G. & Nicolò G.',
+      description='Implementation of OpenAI Gym for traffic control',
+      install_requires=['gymnasium==0.27.1', 'numpy==1.24.2'],  # And any other dependencies
+      url="https://github.com/oskargirardin/traffic_control",
+      packages=setuptools.find_packages(),
+      python_requires=">=3.6",
+      classifiers=[
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Mathematics",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+    ],
+)

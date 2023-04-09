@@ -1,8 +1,6 @@
 import pygame
-from pygame_setup import *
 import math
-from objects import *
-
+from traffic_control_game.envs.logic import *
 
 
 def draw_dashed_line(display, color, start_pos, end_pos, width=1, dash_length=10):
@@ -70,7 +68,7 @@ def draw_score(display, score, font, color):
     draw_text(display, f"Score: {score}", font, (50,50), color)
 
 
-def draw(display, lights_dict, score, num_cars):
+def draw_all(display, lights_dict, score, num_cars):
     display.fill(Setup.GREY) # Fill the screen with black
     draw_background(display)
     draw_lights(display, lights_dict)

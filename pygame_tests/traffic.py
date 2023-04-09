@@ -1,4 +1,5 @@
 import pygame
+import sys
 from pygame_setup import *
 from draw import *
 from objects import *
@@ -11,15 +12,16 @@ pygame.init()
 window = pygame.display.set_mode((Setup.WIDTH, Setup.HEIGHT))
 pygame.display.set_caption("Traffic Control")
 
-score = 0
+score, iter, num_cars = 0, 0, 0
 crash = False
-iter = 0
-T = 2000
-cars_fun = [Setup.cos_fun(100, T,0, 130),Setup.cos_fun(100, T,500, 130), Setup.cos_fun(100, T,1000, 130), Setup.cos_fun(100, T,1500, 130)]
-iter_left = [fun(0) for fun in cars_fun]
 dirs = ["left", "down", "right", "up"]
-n_cars_per_round = 5
-num_cars = 0
+
+T = 1000
+n_cars_per_round = 50
+
+cars_fun = [Setup.cos_fun(100, T, 0, 130), Setup.cos_fun(100, T, 500, 130), Setup.cos_fun(100, T, 1000, 130), Setup.cos_fun(100, T, 1500, 130)]
+iter_left = [fun(0) for fun in cars_fun]
+
 round_done = False
 # Initialize game
 my_game = Game()
@@ -30,7 +32,7 @@ clock = pygame.time.Clock()
 running = True
 while running:
     dt = clock.tick(60)
-    iter = (iter+1)%T
+    iter = (iter+1) % T
     iter_left = [x-1 for x in iter_left]
     if not round_done:
         for dir, n_iter in enumerate(iter_left):
@@ -39,20 +41,24 @@ while running:
                 my_game.add_car(my_dir)
                 iter_left[dir] = cars_fun[dir](iter)
                 num_cars += 1
-    
+
     # Handle events
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+        
+        if event.type == pygame.QUIT: 
+            # Quit Pygame
+            pygame.quit()   # running = False
+            sys.exit()
+            
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                my_game.switch_light("left")
-            if event.key == pygame.K_UP:
-                my_game.switch_light("up")
-            if event.key == pygame.K_RIGHT:
                 my_game.switch_light("right")
-            if event.key == pygame.K_DOWN:
+            if event.key == pygame.K_UP:
                 my_game.switch_light("down")
+            if event.key == pygame.K_RIGHT:
+                my_game.switch_light("left")
+            if event.key == pygame.K_DOWN:
+                my_game.switch_light("up")
 
     # Update game state
     score = my_game.update_logic(dt, score)
@@ -67,7 +73,5 @@ while running:
     if round_done and (not my_game.cars_on_screen()):
         running = False
 
-    pygame.display.update() # Update the screen
-    
-# Quit Pygame
-pygame.quit()
+    pygame.display.update()  # Update the screen
+

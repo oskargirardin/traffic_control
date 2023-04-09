@@ -24,7 +24,7 @@ class Setup:
     CENTER_X = WIDTH//2
 
     # Stop points
-    STOP_LENGTH = 5
+    STOP_LENGTH = 25
     STOP_ZONES = {
         "down": Rect(CENTER_X-DIST_CENTER, CENTER_Y-DIST_CENTER-STOP_LENGTH, DIST_CENTER, STOP_LENGTH),
         "up": Rect(CENTER_X, CENTER_Y+DIST_CENTER, DIST_CENTER, STOP_LENGTH),
@@ -35,7 +35,6 @@ class Setup:
     # Font
     geneva50 = pygame.font.SysFont("geneva", 50)
 
-    CARS_PER_ROUND = 200
 
     def cos_fun(A, T, phi, k):
         return lambda x: A*math.cos(2*math.pi*x/T + phi)+k
