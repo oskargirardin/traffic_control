@@ -12,18 +12,20 @@ import math
 pygame.font.init()
 IMAGE_DIR = "img"
 IMAGES = os.listdir(IMAGE_DIR)
-ANGLES = {"up": 0, "down": 180, "left": 90, "right": 270}
+ANGLES = {"south": 0, "north": 180, "east": 90, "west": 270}
 
 
-def get_movement(direction, nudgex, nudgey):
+
+
+def get_movement(direction):
     dist_center = Setup.DIST_CENTER
     center_x, center_y = Setup.CENTER_X, Setup.CENTER_Y
     width, height = Setup.WIDTH, Setup.HEIGHT
 
-    movements = {"down": (0, 1), "up": (0, -1), "left": (-1, 0), "right": (1, 0)}
+    movements = {"north": (0, 1), "south": (0, -1), "east": (-1, 0), "west": (1, 0)}
     
-    initial_pos = {"down": (center_x-dist_center/2-nudgex, 0), "up": (center_x+dist_center/2-nudgex, height),
-                   "left": (width, center_y-dist_center/2-nudgey), "right": (0, center_y+dist_center/2-nudgey)}
+    initial_pos = {"north": (center_x-dist_center/2-Setup.NUDGE_X, 0), "south": (center_x+dist_center/2-Setup.NUDGE_X, height),
+                   "east": (width, center_y-dist_center/2-Setup.NUDGE_Y), "west": (0, center_y+dist_center/2-Setup.NUDGE_Y)}
     
     return movements[direction], Point(initial_pos[direction])
 
@@ -34,6 +36,9 @@ class Setup:
     # Size of screen
     WIDTH = 1200
     HEIGHT = 800
+
+    # Env steps for every action
+    N_ENV_STEPS = 10
 
     # Colors
     BLACK = (0, 0, 0)
@@ -47,14 +52,16 @@ class Setup:
     DIST_CENTER = ROAD_WIDTH//2
     CENTER_Y = HEIGHT//2
     CENTER_X = WIDTH//2
+    NUDGE_X = 5
+    NUDGE_Y = 5
 
     # Stop points
     STOP_LENGTH = 25
     STOP_ZONES = {
-        "down": Rect(CENTER_X-DIST_CENTER, CENTER_Y-DIST_CENTER-STOP_LENGTH, DIST_CENTER, STOP_LENGTH),
-        "up": Rect(CENTER_X, CENTER_Y+DIST_CENTER, DIST_CENTER, STOP_LENGTH),
-        "left": Rect(CENTER_X+DIST_CENTER,CENTER_Y-DIST_CENTER, STOP_LENGTH, DIST_CENTER),
-        "right": Rect(CENTER_X-DIST_CENTER-STOP_LENGTH, CENTER_Y, STOP_LENGTH, DIST_CENTER)
+        "north": Rect(CENTER_X-DIST_CENTER, CENTER_Y-DIST_CENTER-STOP_LENGTH, DIST_CENTER, STOP_LENGTH),
+        "south": Rect(CENTER_X, CENTER_Y+DIST_CENTER, DIST_CENTER, STOP_LENGTH),
+        "east": Rect(CENTER_X+DIST_CENTER,CENTER_Y-DIST_CENTER, STOP_LENGTH, DIST_CENTER),
+        "west": Rect(CENTER_X-DIST_CENTER-STOP_LENGTH, CENTER_Y, STOP_LENGTH, DIST_CENTER)
     }
 
     # Font
@@ -102,14 +109,14 @@ class Point:
 class Car(pygame.sprite.Sprite):
 
     def __init__(self,
-                 direction="down",
-                 width=25,
-                 height=42,
-                 speed=0.1):
+                 direction="north",
+                 width=12,
+                 height=21,
+                 speed=0.2):
         super().__init__()
 
         self.direction = direction
-        self.moving, self.pos = get_movement(direction, 5, 5)
+        self.moving, self.pos = get_movement(direction)
         self.width = width
         self.height = height
         self.speed = speed
@@ -175,6 +182,8 @@ class Game:
                     fun(car)       
         
     def add_car(self, dir):
+        if not self.can_add_car(dir):
+            return
         self.cars_dict[dir].add([Car(direction=dir)])
         self.number_cars += 1
         
@@ -188,6 +197,7 @@ class Game:
         for _, cars in self.cars_dict.items():
             for car in cars:
                 car.draw(surface)
+
 
     def check_lights(self):
         """
@@ -224,15 +234,22 @@ class Game:
                     return True
         return False
     
-    def update_score(self, score):
+
+    def can_add_car(self, dir):
+        car_group = self.cars_dict[dir]
+        car = Car(direction=dir)
+        return not pygame.sprite.spritecollide(car, car_group, dokill=False )
+        
+
+
+    def update_score(self):
         for _, car_group in self.cars_dict.items():
             for car in car_group:
                 if car.is_off_screen():
                     car_group.remove(car)
-                    self.number_cars -= 1
-                    score += 1
-        self.score = score
-        return score
+                    self.score += 1
+
+        return self.score
     
 
     def update_logic(self, dt):

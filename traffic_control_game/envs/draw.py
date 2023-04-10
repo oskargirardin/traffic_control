@@ -54,10 +54,10 @@ def draw_lights(display, lights_dict):
     center_y = Setup.CENTER_Y
     center_x = Setup.CENTER_X
     # Stop lines
-    pygame.draw.line(display , Setup.GREEN if lights_dict["down"] else Setup.RED, (center_x-dist_center, center_y-dist_center), (center_x, center_y-dist_center), width = 1)
-    pygame.draw.line(display , Setup.GREEN if lights_dict["right"] else Setup.RED, (center_x-dist_center, center_y+dist_center), (center_x-dist_center, center_y), width = 1)
-    pygame.draw.line(display , Setup.GREEN if lights_dict["up"] else Setup.RED, (center_x+dist_center, center_y+dist_center), (center_x, center_y+dist_center), width = 1)
-    pygame.draw.line(display , Setup.GREEN if lights_dict["left"] else Setup.RED, (center_x+dist_center, center_y-dist_center), (center_x+dist_center, center_y), width = 1)
+    pygame.draw.line(display , Setup.GREEN if lights_dict["north"] else Setup.RED, (center_x-dist_center, center_y-dist_center), (center_x, center_y-dist_center), width = 1)
+    pygame.draw.line(display , Setup.GREEN if lights_dict["west"] else Setup.RED, (center_x-dist_center, center_y+dist_center), (center_x-dist_center, center_y), width = 1)
+    pygame.draw.line(display , Setup.GREEN if lights_dict["south"] else Setup.RED, (center_x+dist_center, center_y+dist_center), (center_x, center_y+dist_center), width = 1)
+    pygame.draw.line(display , Setup.GREEN if lights_dict["east"] else Setup.RED, (center_x+dist_center, center_y-dist_center), (center_x+dist_center, center_y), width = 1)
 
 
 def draw_text(display, text, font, pos, color):
