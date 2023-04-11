@@ -38,7 +38,7 @@ class Setup:
     HEIGHT = 800
 
     # Env steps for every action
-    N_ENV_STEPS = 1000
+    N_ENV_STEPS = 150
 
     # Colors
     BLACK = (0, 0, 0)
