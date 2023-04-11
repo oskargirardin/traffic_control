@@ -26,7 +26,6 @@ class TrafficControlEnv(gym.Env):
         self.window_size = (self.setup.WIDTH, self.setup.HEIGHT) 
         self.render_mode = render_mode
         self.dt = None   # for movement of cars, initialized later (from clock.tick())
-        self.max_car_in_line = 99   #   max amount of car queuing??
         self.ps = self.np_random.uniform(low=0.01, high=0.05, size=len(self.dirs))  # probabilities of car generation for each line??
         self.game = None  # game (initialized in reset)
         # render
@@ -34,11 +33,15 @@ class TrafficControlEnv(gym.Env):
         self.render_mode = render_mode
         
         # observation space
-        self.observation_space = spaces.Dict({
-                                            dir_: spaces.Discrete(self.max_car_in_line, start=0)
-                                            for dir_ in self.dirs
-                                              })
-        
+        #self.observation_space = spaces.Dict({dir_: (spaces.Discrete(Setup.MAX_CARS_NS, start=0) if dir_ in ["north", "south"] else dir_: spaces.Discrete(Setup.MAX_CARS_WE, start=0)) for dir_ in self.dirs})
+        self.observation_space = spaces.Dict(
+            {
+            "north": spaces.Discrete(Setup.MAX_CARS_NS, start=0),
+            "south": spaces.Discrete(Setup.MAX_CARS_NS, start=0),
+            "east": spaces.Discrete(Setup.MAX_CARS_WE, start=0),
+            "west": spaces.Discrete(Setup.MAX_CARS_WE, start=0),
+            }
+        )
         # action space
         #self.action_space = spaces.MultiDiscrete([2]*len(self.dirs))
         self.action_space = spaces.Discrete(self.n_actions)
@@ -138,7 +141,7 @@ class TrafficControlEnv(gym.Env):
 
             # Conditions for termination (others to be added???)
             if self.game.check_crash():
-                reward = -10000  # negative rewards for termination??
+                reward = -1000  # negative rewards for termination??
                 terminated = True
                 break
         

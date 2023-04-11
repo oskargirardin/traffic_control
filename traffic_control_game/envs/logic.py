@@ -54,9 +54,13 @@ class Setup:
     CENTER_X = WIDTH//2
     NUDGE_X = 5
     NUDGE_Y = 5
+    CAR_HEIGHT = 20
+    CAR_WIDTH = 12
+    MAX_CARS_NS = (CENTER_Y - DIST_CENTER)//CAR_HEIGHT + 1 # Needs to be changed if stopping criterium at light changed
+    MAX_CARS_WE = (CENTER_X - DIST_CENTER)//CAR_HEIGHT + 1 # Needs to be changed if stopping criterium at light changed
 
     # Stop points
-    STOP_LENGTH = 25
+    STOP_LENGTH = 24
     STOP_ZONES = {
         "north": Rect(CENTER_X-DIST_CENTER, CENTER_Y-DIST_CENTER-STOP_LENGTH, DIST_CENTER, STOP_LENGTH),
         "south": Rect(CENTER_X, CENTER_Y+DIST_CENTER, DIST_CENTER, STOP_LENGTH),
@@ -110,15 +114,13 @@ class Car(pygame.sprite.Sprite):
 
     def __init__(self,
                  direction="north",
-                 width=12,
-                 height=21,
                  speed=0.2):
         super().__init__()
 
         self.direction = direction
         self.moving, self.pos = get_movement(direction)
-        self.width = width
-        self.height = height
+        self.width = Setup.CAR_WIDTH
+        self.height = Setup.CAR_HEIGHT
         self.speed = speed
         self.driving = True
 
@@ -217,7 +219,7 @@ class Game:
             for car in cars:
                 cars_in_front = list(filter(lambda x: car.pos.dot(Point(car.moving)) < x.pos.dot(Point(x.moving)), self.cars_dict[dir]))
                 immediate_cars = sorted(cars_in_front, key=lambda x: x.pos.dot(Point(x.moving)), reverse=False)
-                if (len(immediate_cars)>0) and (Point(car.rect.center).dist(Point(immediate_cars[0].rect.center))<car.height*1.2):
+                if (len(immediate_cars)>0) and (Point(car.rect.center).dist(Point(immediate_cars[0].rect.center))<= car.height):
                     car.stop()
                          
     def check_crash(self):
