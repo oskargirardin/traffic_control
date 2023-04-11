@@ -1,4 +1,9 @@
 # traffic_control
+## TO DO
+- Implement yellow light to help learning? Now it is possible that the action of GrGr is associated with a -1000 reward since there can still be cars on the crossing. Alternative: Change lights after x cars have passed (Ugo approach)?
+- Plotting functions, functions to save training as json with parameters, score, history,...
+
+
 
 ## Useful links
 https://traffic-signal-control.github.io/#tutorial
