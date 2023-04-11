@@ -15,17 +15,18 @@ from traffic_control_game.envs.logic import *
 class TrafficControlEnv(gym.Env):
     
     metadata = {"render_modes": ["human"], "render_fps": 60}
-    dirs = ["east", "north", "west", "south"]
+    dirs = ["north", "east", "south", "west"]
+    dirs2 = ["NS", "WE"]
+    dir_index = {"north": 0, "east": 1, "south": 2, "west": 3}
     
-    
-    def __init__(self, n_actions, render_mode=None):
+    def __init__(self, n_actions, n_states, render_mode=None):
         
         self.n_actions = n_actions
 
         self.setup = Setup
         self.window_size = (self.setup.WIDTH, self.setup.HEIGHT) 
         self.render_mode = render_mode
-        self.dt = None   # for movement of cars, initialized later (from clock.tick())
+        #self.dt = None   # for movement of cars, initialized later (from clock.tick())
         self.ps = self.np_random.uniform(low=0.01, high=0.05, size=len(self.dirs))  # probabilities of car generation for each line??
         self.game = None  # game (initialized in reset)
         # render
@@ -34,14 +35,25 @@ class TrafficControlEnv(gym.Env):
         
         # observation space
         #self.observation_space = spaces.Dict({dir_: (spaces.Discrete(Setup.MAX_CARS_NS, start=0) if dir_ in ["north", "south"] else dir_: spaces.Discrete(Setup.MAX_CARS_WE, start=0)) for dir_ in self.dirs})
-        self.observation_space = spaces.Dict(
-            {
-            "north": spaces.Discrete(Setup.MAX_CARS_NS, start=0),
-            "south": spaces.Discrete(Setup.MAX_CARS_NS, start=0),
-            "east": spaces.Discrete(Setup.MAX_CARS_WE, start=0),
-            "west": spaces.Discrete(Setup.MAX_CARS_WE, start=0),
-            }
-        )
+        self.n_states = n_states
+        # 4-states or 2-states version
+        if self.n_states == 4:
+            self.observation_space = spaces.Dict(
+                {
+                "north": spaces.Discrete(Setup.MAX_CARS_NS, start=0),
+                "south": spaces.Discrete(Setup.MAX_CARS_NS, start=0),
+                "east": spaces.Discrete(Setup.MAX_CARS_WE, start=0),
+                "west": spaces.Discrete(Setup.MAX_CARS_WE, start=0),
+                }
+            )
+        elif self.n_states == 2:
+            self.observation_space = spaces.Dict(
+                {
+                "NS": spaces.Discrete(2*Setup.MAX_CARS_NS, start=0),
+                "WE": spaces.Discrete(2*Setup.MAX_CARS_WE, start=0)
+                }
+            )
+
         # action space
         #self.action_space = spaces.MultiDiscrete([2]*len(self.dirs))
         self.action_space = spaces.Discrete(self.n_actions)
@@ -57,12 +69,15 @@ class TrafficControlEnv(gym.Env):
             to be updated in .step if we want additional info'''
         
         # number of waiting cars in each line
-        waiting = [0]*len(self.dirs)
-        for idx, (dir, sprites) in enumerate(self.game.cars_dict.items()):
+        waiting = [0]*self.n_states
+        for dir, sprites in self.game.cars_dict.items():
             for car in sprites:
-                waiting[idx] += int(not car.driving)
-        return {dir: wait for dir, wait in zip(self.dirs, waiting)}
-    
+                # Add cars to waiting list. Modulo takes care of 2-state and 4-state scenarios.
+                waiting[self.dir_index[dir]%self.n_states] += int(not car.driving)
+        if self.n_states == 2:
+            return {dir: wait for dir, wait in zip(self.dirs2, waiting)}
+        else:
+            return {dir: wait for dir, wait in zip(self.dirs, waiting)}
     
     def _get_info(self):
         ''' auxiliary info returned '''
@@ -79,9 +94,9 @@ class TrafficControlEnv(gym.Env):
         
         self.game = Game(self.dirs)
 
-        observation = {dir: 0 for dir in self.dirs}  # 0 waiting cars at the beginning
+        observation = {dir: 0 for dir in self.dirs2} if self.n_states == 2 else {dir: 0 for dir in self.dirs} # 0 waiting cars at the beginning
+        
         info = {"score": 0}
-
         self.render()
 
         return observation, info
@@ -99,10 +114,10 @@ class TrafficControlEnv(gym.Env):
             self.game.set_light("east", False)
             self.game.set_light("west", False)
         elif action == 1:
-            self.game.set_light("east", False)
-            self.game.set_light("west", False)
-            self.game.set_light("south", True)
-            self.game.set_light("north", True)
+            self.game.set_light("south", False)
+            self.game.set_light("north", False)
+            self.game.set_light("east", True)
+            self.game.set_light("west", True)
         elif action == 2:
             self.game.set_light("east", False)
             self.game.set_light("west", False)
@@ -125,7 +140,7 @@ class TrafficControlEnv(gym.Env):
                 self.game.add_car(dir)
                 
             # Update game state
-            self.game.move_cars(self.dt)  
+            self.game.move_cars()  
             self.game.check_lights()
             self.game.stop_behind_car()
             self.game.update_score()
@@ -188,7 +203,7 @@ class TrafficControlEnv(gym.Env):
 
             # We need to ensure that human-rendering occurs at the predefined framerate.
             # The following line will automatically add a delay to keep the framerate stable.
-            self.dt = self.clock.tick(self.metadata["render_fps"])
+            #self.dt = self.clock.tick(self.metadata["render_fps"])
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT: 
@@ -198,7 +213,7 @@ class TrafficControlEnv(gym.Env):
         else:  # rgb_array
             pass
         
-        self.dt = 20 # Keeping the same speed of cars so that the agent learns for a fixed speed (indep. of CPU speed)
+        #self.dt = 20 # Keeping the same speed of cars so that the agent learns for a fixed speed (indep. of CPU speed)
         
     def close(self):
         ''' close any open resources that were used by the environment '''

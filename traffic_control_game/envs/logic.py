@@ -38,7 +38,7 @@ class Setup:
     HEIGHT = 800
 
     # Env steps for every action
-    N_ENV_STEPS = 10
+    N_ENV_STEPS = 1000
 
     # Colors
     BLACK = (0, 0, 0)
@@ -56,6 +56,7 @@ class Setup:
     NUDGE_Y = 5
     CAR_HEIGHT = 20
     CAR_WIDTH = 12
+    CAR_SPEED = 1
     MAX_CARS_NS = (CENTER_Y - DIST_CENTER)//CAR_HEIGHT + 1 # Needs to be changed if stopping criterium at light changed
     MAX_CARS_WE = (CENTER_X - DIST_CENTER)//CAR_HEIGHT + 1 # Needs to be changed if stopping criterium at light changed
 
@@ -113,15 +114,14 @@ class Point:
 class Car(pygame.sprite.Sprite):
 
     def __init__(self,
-                 direction="north",
-                 speed=0.2):
+                 direction="north"):
         super().__init__()
 
         self.direction = direction
         self.moving, self.pos = get_movement(direction)
         self.width = Setup.CAR_WIDTH
         self.height = Setup.CAR_HEIGHT
-        self.speed = speed
+        self.speed = Setup.CAR_SPEED
         self.driving = True
 
         self.image = pygame.image.load(os.path.join(os.getcwd(), IMAGE_DIR, np.random.choice(IMAGES)))
@@ -131,9 +131,9 @@ class Car(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (self.pos.x, self.pos.y)
 
-    def move(self, dt):
+    def move(self):
         if self.driving:
-            self.pos = Point(self.rect.center) +  Point(self.moving)*self.speed*dt
+            self.pos = Point(self.rect.center) +  Point(self.moving)*self.speed
             self.rect.center = (self.pos.x, self.pos.y)
 
     def stop(self):
@@ -169,10 +169,10 @@ class Game:
         self.number_cars = 0
         self.score = 0
 
-    def move_cars(self, dt):
+    def move_cars(self):
         for _, cars in self.cars_dict.items():
             for car in cars:
-                car.move(dt)
+                car.move()
 
     def apply_to_each_car(self, fun, dir = None):
         if dir:
@@ -194,6 +194,9 @@ class Game:
 
     def switch_light(self, dir):
         self.lights_dict[dir] = not self.lights_dict[dir]
+
+    def get_lights(self):
+        return self.lights_dict
 
     def draw_cars(self, surface):
         for _, cars in self.cars_dict.items():
@@ -254,11 +257,11 @@ class Game:
         return self.score
     
 
-    def update_logic(self, dt):
+    def update_logic(self):
         """
         Wrapper function to make all game updates
         """
-        self.move_cars(dt)
+        self.move_cars()
         self.check_lights()
         self.stop_behind_car()
         if self.check_crash():
