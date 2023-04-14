@@ -3,6 +3,11 @@ import math
 from traffic_control_game.envs.logic import *
 
 
+dist_center = Setup.DIST_CENTER
+center_y = Setup.CENTER_Y
+center_x = Setup.CENTER_X
+    
+
 def draw_dashed_line(display, color, start_pos, end_pos, width=1, dash_length=10):
     origin = Point(start_pos)
     target = Point(end_pos)
@@ -16,9 +21,7 @@ def draw_dashed_line(display, color, start_pos, end_pos, width=1, dash_length=10
         pygame.draw.line(display, color, start.get(), end.get(), width)
 
 def draw_background(display):
-    dist_center = Setup.ROAD_WIDTH//2
-    center_y = Setup.HEIGHT//2
-    center_x = Setup.WIDTH//2
+    global dist_center, center_y, center_x
     # Draw grass
     pygame.draw.rect(display, color=Setup.GREEN, rect = pygame.rect.Rect(0, 0, center_x-dist_center, center_y-dist_center))
     pygame.draw.rect(display, color=Setup.GREEN, rect = pygame.rect.Rect(center_x+dist_center, 0, center_x-dist_center, center_y-dist_center))
@@ -46,19 +49,28 @@ def draw_background(display):
     #pygame.draw.line(display , Setup.WHITE, (center_x+dist_center, center_y-dist_center), (center_x+dist_center, center_y), width = 1)
 
 
-def draw_lights(display, lights_dict):
-    # Top light
-    #col_top = Setup.GREEN if green_top else Setup.RED
-    #pygame.draw.rect(display, )
-    dist_center = Setup.DIST_CENTER
-    center_y = Setup.CENTER_Y
-    center_x = Setup.CENTER_X
+def draw_lights(display, lights_dict, yellows):
+    global dist_center, center_y, center_x
     # Stop lines
     pygame.draw.line(display , Setup.GREEN if lights_dict["north"] else Setup.RED, (center_x-dist_center, center_y-dist_center), (center_x, center_y-dist_center), width = 1)
     pygame.draw.line(display , Setup.GREEN if lights_dict["west"] else Setup.RED, (center_x-dist_center, center_y+dist_center), (center_x-dist_center, center_y), width = 1)
     pygame.draw.line(display , Setup.GREEN if lights_dict["south"] else Setup.RED, (center_x+dist_center, center_y+dist_center), (center_x, center_y+dist_center), width = 1)
     pygame.draw.line(display , Setup.GREEN if lights_dict["east"] else Setup.RED, (center_x+dist_center, center_y-dist_center), (center_x+dist_center, center_y), width = 1)
-
+    
+    for dir in yellows:
+        draw_yellow(display, dir)
+        
+def draw_yellow(display, dir):
+    global dist_center, center_y, center_x
+    if dir=="north":
+        pygame.draw.line(display , Setup.YELLOW, (center_x-dist_center, center_y-dist_center), (center_x, center_y-dist_center), width = 1)
+    elif dir=="west":
+        pygame.draw.line(display , Setup.YELLOW, (center_x-dist_center, center_y+dist_center), (center_x-dist_center, center_y), width = 1)
+    elif dir=="south":
+        pygame.draw.line(display , Setup.YELLOW, (center_x+dist_center, center_y+dist_center), (center_x, center_y+dist_center), width = 1)
+    else:  # east
+        pygame.draw.line(display , Setup.YELLOW, (center_x+dist_center, center_y-dist_center), (center_x+dist_center, center_y), width = 1)
+        
 
 def draw_text(display, text, font, pos, color):
     text_surface = font.render(text, True, color)
@@ -68,9 +80,9 @@ def draw_score(display, score, font, color):
     draw_text(display, f"Score: {score}", font, (50,50), color)
 
 
-def draw_all(display, lights_dict, score, num_cars):
+def draw_all(display, lights_dict, score, num_cars, yellows=[]):
     display.fill(Setup.GREY) # Fill the screen with black
     draw_background(display)
-    draw_lights(display, lights_dict)
+    draw_lights(display, lights_dict, yellows)
     draw_score(display, score, Setup.geneva50, Setup.BLACK)
     draw_text(display, f"Cars past: {num_cars}", Setup.geneva50, (50, 100), Setup.BLACK)

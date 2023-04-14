@@ -24,8 +24,11 @@ def get_movement(direction):
 
     movements = {"north": (0, 1), "south": (0, -1), "east": (-1, 0), "west": (1, 0)}
     
-    initial_pos = {"north": (center_x-dist_center/2-Setup.NUDGE_X, 0), "south": (center_x+dist_center/2-Setup.NUDGE_X, height),
-                   "east": (width, center_y-dist_center/2-Setup.NUDGE_Y), "west": (0, center_y+dist_center/2-Setup.NUDGE_Y)}
+    nudg_o, nudg_e = Setup.NUDGE, - Setup.NUDGE
+    nudges = [nudg_o, nudg_e]
+    
+    initial_pos = {"north": (center_x-dist_center/2-np.random.choice(nudges), 0), "south": (center_x+dist_center/2-np.random.choice(nudges), height),
+                   "east": (width, center_y-dist_center/2-np.random.choice(nudges)), "west": (0, center_y+dist_center/2-np.random.choice(nudges))}
     
     return movements[direction], Point(initial_pos[direction])
 
@@ -34,11 +37,11 @@ def get_movement(direction):
 class Setup:
     
     # Size of screen
-    WIDTH = 1200
-    HEIGHT = 800
+    WIDTH = 1000
+    HEIGHT = 850
 
     # Env steps for every action
-    N_ENV_STEPS = 150
+    N_ENV_STEPS = 170
 
     # Colors
     BLACK = (0, 0, 0)
@@ -46,19 +49,20 @@ class Setup:
     GREY = (144,142,142)
     GREEN = (111, 209, 3)
     RED = (255, 0, 0)
+    YELLOW = (255, 211, 67)
 
     # Width road
     ROAD_WIDTH = WIDTH//10
     DIST_CENTER = ROAD_WIDTH//2
     CENTER_Y = HEIGHT//2
     CENTER_X = WIDTH//2
-    NUDGE_X = 5
-    NUDGE_Y = 5
+    NUDGE = 9.5 #5
+    # NUDGE_Y = 0 # 5
     CAR_HEIGHT = 20
     CAR_WIDTH = 12
     CAR_SPEED = 1
-    MAX_CARS_NS = (CENTER_Y - DIST_CENTER)//CAR_HEIGHT + 1 # Needs to be changed if stopping criterium at light changed
-    MAX_CARS_WE = (CENTER_X - DIST_CENTER)//CAR_HEIGHT + 1 # Needs to be changed if stopping criterium at light changed
+    MAX_CARS_NS = 2*((CENTER_Y - DIST_CENTER)//CAR_HEIGHT + 1) # Needs to be changed if stopping criterium at light changed
+    MAX_CARS_WE = 2*((CENTER_X - DIST_CENTER)//CAR_HEIGHT + 1) # Needs to be changed if stopping criterium at light changed
 
     # Stop points
     STOP_LENGTH = 24
@@ -68,6 +72,8 @@ class Setup:
         "east": Rect(CENTER_X+DIST_CENTER,CENTER_Y-DIST_CENTER, STOP_LENGTH, DIST_CENTER),
         "west": Rect(CENTER_X-DIST_CENTER-STOP_LENGTH, CENTER_Y, STOP_LENGTH, DIST_CENTER)
     }
+    
+    INTERSECT_AREA = Rect(CENTER_X-DIST_CENTER, CENTER_Y-DIST_CENTER, 2*DIST_CENTER, 2*DIST_CENTER)
 
     # Font
     geneva50 = pygame.font.SysFont("geneva", 50)
@@ -123,6 +129,7 @@ class Car(pygame.sprite.Sprite):
         self.height = Setup.CAR_HEIGHT
         self.speed = Setup.CAR_SPEED
         self.driving = True
+        self.waiting_time = 0
 
         self.image = pygame.image.load(os.path.join(os.getcwd(), IMAGE_DIR, np.random.choice(IMAGES)))
         self.image = pygame.transform.scale(self.image, (self.width, self.height))
@@ -141,10 +148,16 @@ class Car(pygame.sprite.Sprite):
 
     def go(self):
         self.driving = True
+    
+    def update_waiting(self):
+        self.waiting_time += 1
 
     def draw(self, surface: pygame.display):
         surface.blit(self.image, self.rect)
         #pygame.draw.rect(surface, Setup.BLACK, rect=rect, border_radius=min(self.height, self.width) // 2)
+        
+    def is_at_intersection(self):
+        return Setup.INTERSECT_AREA.collidepoint(self.rect.center)
 
     def is_at_light(self):
         return (pygame.Rect.colliderect(self.rect, Setup.STOP_ZONES[self.direction])) and (Setup.STOP_ZONES[self.direction].collidepoint(self.rect.center))
@@ -172,7 +185,7 @@ class Game:
     def move_cars(self):
         for _, cars in self.cars_dict.items():
             for car in cars:
-                car.move()
+                car.move()    
 
     def apply_to_each_car(self, fun, dir = None):
         if dir:
@@ -197,12 +210,22 @@ class Game:
 
     def get_lights(self):
         return self.lights_dict
+    
+    def max_wait_time(self):
+        '''
+        Maximum waiting time among cars that are waiting
+        '''
+        res = 0
+        for _, cars in self.cars_dict.items():
+            for car in cars:
+                if not car.driving:
+                    res = max(res, car.waiting_time)
+        return res
 
     def draw_cars(self, surface):
         for _, cars in self.cars_dict.items():
             for car in cars:
                 car.draw(surface)
-
 
     def check_lights(self):
         """
@@ -213,6 +236,22 @@ class Game:
                 self.apply_to_each_car(Car.go, dir=dir)
             if not green: # Light is red
                 self.apply_to_each_car(Car.should_stop, dir=dir)
+                
+    def move_at_yellow(self):
+        for dir, cars in self.cars_dict.items():
+            for car in cars:
+                if not Setup.STOP_ZONES[dir].collidepoint(car.rect.center):
+                    car.move()
+                        
+                
+    def check_at_yellow(self, yellows):
+        for dir in yellows:
+            if len(self.cars_dict[dir])>0:
+                for car in self.cars_dict[dir]:
+                    if car.is_at_intersection():
+                        return True
+        return False
+
 
     def stop_behind_car(self):
         """
@@ -221,9 +260,20 @@ class Game:
         for dir, cars in self.cars_dict.items():
             for car in cars:
                 cars_in_front = list(filter(lambda x: car.pos.dot(Point(car.moving)) < x.pos.dot(Point(x.moving)), self.cars_dict[dir]))
+                
+                # same road lane
+                if dir in ["north", "south"]:
+                    cars_in_front = list(filter(lambda x: car.pos.x==x.pos.x, cars_in_front))
+                else:
+                    cars_in_front = list(filter(lambda x: car.pos.y==x.pos.y, cars_in_front))
+                
                 immediate_cars = sorted(cars_in_front, key=lambda x: x.pos.dot(Point(x.moving)), reverse=False)
-                if (len(immediate_cars)>0) and (Point(car.rect.center).dist(Point(immediate_cars[0].rect.center))<= car.height):
+                if (len(immediate_cars)>0) and (Point(car.rect.center).dist(Point(immediate_cars[0].rect.center))<= 1.15*car.height):
                     car.stop()
+        
+        # Update waiting time (for all)
+        self.apply_to_each_car(Car.update_waiting, dir=None)
+        
                          
     def check_crash(self):
         """
@@ -241,11 +291,12 @@ class Game:
     
 
     def can_add_car(self, dir):
+        """
+        Function to verify whether a new car can be added or not (lane already full)
+        """
         car_group = self.cars_dict[dir]
         car = Car(direction=dir)
         return not pygame.sprite.spritecollide(car, car_group, dokill=False )
-        
-
 
     def update_score(self):
         for _, car_group in self.cars_dict.items():
