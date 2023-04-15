@@ -16,7 +16,6 @@ ANGLES = {"south": 0, "north": 180, "east": 90, "west": 270}
 
 
 
-
 def get_movement(direction):
     dist_center = Setup.DIST_CENTER
     center_x, center_y = Setup.CENTER_X, Setup.CENTER_Y
@@ -41,7 +40,7 @@ class Setup:
     HEIGHT = 850
 
     # Env steps for every action
-    N_ENV_STEPS = 170
+    N_ENV_STEPS = 150
 
     # Colors
     BLACK = (0, 0, 0)
@@ -148,6 +147,9 @@ class Car(pygame.sprite.Sprite):
 
     def go(self):
         self.driving = True
+        
+    def reset_waiting(self):
+        self.waiting_time = 0
     
     def update_waiting(self):
         self.waiting_time += 1
@@ -218,8 +220,7 @@ class Game:
         res = 0
         for _, cars in self.cars_dict.items():
             for car in cars:
-                if not car.driving:
-                    res = max(res, car.waiting_time)
+                res = max(res, car.waiting_time)
         return res
 
     def draw_cars(self, surface):
@@ -259,21 +260,27 @@ class Game:
         """
         for dir, cars in self.cars_dict.items():
             for car in cars:
-                cars_in_front = list(filter(lambda x: car.pos.dot(Point(car.moving)) < x.pos.dot(Point(x.moving)), self.cars_dict[dir]))
-                
-                # same road lane
-                if dir in ["north", "south"]:
-                    cars_in_front = list(filter(lambda x: car.pos.x==x.pos.x, cars_in_front))
-                else:
-                    cars_in_front = list(filter(lambda x: car.pos.y==x.pos.y, cars_in_front))
-                
-                immediate_cars = sorted(cars_in_front, key=lambda x: x.pos.dot(Point(x.moving)), reverse=False)
-                if (len(immediate_cars)>0) and (Point(car.rect.center).dist(Point(immediate_cars[0].rect.center))<= 1.15*car.height):
-                    car.stop()
+                if car.driving:
+                    cars_in_front = list(filter(lambda x: car.pos.dot(Point(car.moving)) < x.pos.dot(Point(x.moving)), self.cars_dict[dir]))
+                    
+                    # same road lane
+                    if dir in ["north", "south"]:
+                        cars_in_front = list(filter(lambda x: car.pos.x==x.pos.x, cars_in_front))
+                    else:
+                        cars_in_front = list(filter(lambda x: car.pos.y==x.pos.y, cars_in_front))
+                    
+                    immediate_cars = sorted(cars_in_front, key=lambda x: x.pos.dot(Point(x.moving)), reverse=False)
+                    if (len(immediate_cars)>0) and (Point(car.rect.center).dist(Point(immediate_cars[0].rect.center))<= 1.15*car.height):
+                        car.stop()
         
-        # Update waiting time (for all)
-        self.apply_to_each_car(Car.update_waiting, dir=None)
-        
+    def update_waiting(self):
+        ''' Update waiting time (for all) '''
+        for direct, light_green in self.lights_dict.items():
+            if light_green:
+                self.apply_to_each_car(Car.reset_waiting, dir=direct)
+            else:
+                self.apply_to_each_car(Car.update_waiting, dir=direct)
+                
                          
     def check_crash(self):
         """

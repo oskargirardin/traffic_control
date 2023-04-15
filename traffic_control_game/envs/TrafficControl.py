@@ -28,27 +28,25 @@ class TrafficControlEnv(gym.Env):
                      5: {"north": False, "east": False,  "south": True, "west": True}   # noisy
                     }
     
-    def __init__(self, n_states, render_mode=None):
+    def __init__(self, env_info, render_mode=None):
         
         self.n_actions = len(self.action_mapper)
 
         self.setup = Setup
         self.window_size = (self.setup.WIDTH, self.setup.HEIGHT) 
         self.render_mode = render_mode
-        #self.dt = None   # for movement of cars, initialized later (from clock.tick())
-        #self.ps = self.np_random.uniform(low=0.01, high=0.05, size=len(self.dirs)) 
-        
-        self.ps_ns = self.np_random.uniform(low=0.078, high=0.088, size=1)
-        self.ps_ew = self.np_random.uniform(low=0.01, high=0.02, size=1)
-        self.ps = np.tile(np.concatenate((self.ps_ns, self.ps_ew)), 2)
+
         self.game = None  # game (initialized in reset)
+        self.ps = env_info.get("ps", np.array([1/self.n_actions]*self.n_actions))
+        self.max_wait_time = env_info.get("max_wait_time", 1500)
+        self.env_steps = env_info.get("env_steps", 50) 
         
         # render
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
         
         # observation space
-        self.n_states = n_states
+        self.n_states = env_info.get("n_states", 2) 
         # 4-states or 2-states version
         if self.n_states == 4:
             self.observation_space = spaces.Dict(
@@ -57,13 +55,17 @@ class TrafficControlEnv(gym.Env):
                 "south": spaces.Discrete(Setup.MAX_CARS_NS, start=0),
                 "east": spaces.Discrete(Setup.MAX_CARS_WE, start=0),
                 "west": spaces.Discrete(Setup.MAX_CARS_WE, start=0),
+                "wt": spaces.Discrete(self.max_wait_time),
+                "pa": spaces.Discrete(self.n_actions)
                 }
             )
         elif self.n_states == 2:
             self.observation_space = spaces.Dict(
                 {
                 "NS": spaces.Discrete(2*Setup.MAX_CARS_NS, start=0),
-                "WE": spaces.Discrete(2*Setup.MAX_CARS_WE, start=0)
+                "WE": spaces.Discrete(2*Setup.MAX_CARS_WE, start=0),
+                "WT": spaces.Discrete(self.max_wait_time),
+                "PA": spaces.Discrete(self.n_actions)
                 }
             )
 
@@ -74,9 +76,7 @@ class TrafficControlEnv(gym.Env):
         
         # if human-rendering is used will be initialized
         self.window = None
-        self.clock = None
-        
-        
+        self.clock = None      
         
     def _get_obs(self):
         ''' translates the environment state into an observation 
@@ -90,15 +90,16 @@ class TrafficControlEnv(gym.Env):
                 waiting[self.dir_index[dir]%self.n_states] += int(not car.driving)
                     
         if self.n_states == 2:
-            return {dir: wait for dir, wait in zip(self.dirs2, waiting)}
+            return {**{dir: wait for dir, wait in zip(self.dirs2, waiting)}, 
+                    **{"WT": self.game.max_wait_time(), "PA": self.previous_action} }
         else:
-            return {dir: wait for dir, wait in zip(self.dirs, waiting)}
+            return {**{dir: wait for dir, wait in zip(self.dirs, waiting)},
+                    **{"wt": self.game.max_wait_time(), "pa": self.previous_action}}
     
     
     def _get_info(self):
         ''' auxiliary info returned '''
-        return {"score": self.game.score, "max_wait_time": self.game.max_wait_time()}
-    
+        return ({"score": self.game.score})    
     
     def reset(self, seed=None, options=None):
         ''' called before step and anytime done is issued
@@ -109,9 +110,10 @@ class TrafficControlEnv(gym.Env):
         super().reset(seed=seed)  
         
         self.game = Game(self.dirs)
-
-        observation = {dir: 0 for dir in self.dirs2} if self.n_states == 2 else {dir: 0 for dir in self.dirs} # 0 waiting cars at the beginning
         self.previous_action = 2   # all red
+
+        dir_wait = {dir: 0 for dir in self.dirs2} if self.n_states == 2 else {dir: 0 for dir in self.dirs} # 0 waiting cars at the beginning
+        observation = {**dir_wait, **{"WT": 0, "PA": self.previous_action}} if self.n_states == 2 else {**dir_wait, **{"wt": 0, "pa": self.previous_action}}
         
         info = {"score": 0}
         self.render()
@@ -153,7 +155,8 @@ class TrafficControlEnv(gym.Env):
         self.previous_action = action   # need interaction with previous action to set the yellow light
 
         # Let the environment run for multiple frames with the same action -> light switch appear less often        
-        for _ in range(self.setup.N_ENV_STEPS):
+        #for _ in range(self.setup.N_ENV_STEPS):
+        for _ in range(self.env_steps):
                         
             # Draw cars randomly  (respecting seed from gym.Env)
             draws = self.np_random.binomial(1, p=self.ps)
@@ -165,20 +168,21 @@ class TrafficControlEnv(gym.Env):
             self.game.move_cars()  
             self.game.check_lights()
             self.game.stop_behind_car()
+            self.game.update_waiting()
             self.game.update_score()
 
             observation = self._get_obs()
             info = self._get_info()
             
             # Consistent reward (from https://www.sciencedirect.com/science/article/pii/S0950705123001909)
-            reward = - np.sum(list(observation.values())) - int(0.025*self.game.max_wait_time())
+            reward = - np.sum(list(observation.values())) - int(0.01*self.game.max_wait_time())
             
             if self.render_mode == "human":
                 self.render()
 
-            # Conditions for termination (others to be added???)
-            if self.game.check_crash():
-                reward = -1000  # negative rewards for termination??
+            # Conditions for termination 
+            if self.game.check_crash() or self.game.max_wait_time()>self.max_wait_time:
+                reward = -5000  
                 terminated = True
                 break
             
