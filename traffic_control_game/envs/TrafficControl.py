@@ -23,7 +23,7 @@ class TrafficControlEnv(gym.Env):
     action_mapper = {0: {"north": True, "east": False,  "south": True, "west": False},
                      1: {"north": False, "east": True,  "south": False, "west": True},
                      2: {"north": False, "east": False,  "south": False, "west": False},
-                     3: {"north": True, "east": False,  "south": True, "west": True},
+                     3: {"north": True, "east": True,  "south": True, "west": True},
                      4: {"north": True, "east": True,  "south": False, "west": False},   # noisy
                      5: {"north": False, "east": False,  "south": True, "west": True}   # noisy
                     }
