@@ -5,4 +5,5 @@ A environment based on ```pygame``` and ```gymnasium```, which allows to train R
 
 ## Main files
 ```main.py```: For visualizing environment
+
 ```Agents.ipynb```: For training of agents
