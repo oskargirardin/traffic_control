@@ -153,9 +153,9 @@ class TrafficControlEnv(gym.Env):
                 
         terminated = False
         self.previous_action = action   # need interaction with previous action to set the yellow light
+        self.game.update_waiting()
 
         # Let the environment run for multiple frames with the same action -> light switch appear less often        
-        #for _ in range(self.setup.N_ENV_STEPS):
         for _ in range(self.env_steps):
                         
             # Draw cars randomly  (respecting seed from gym.Env)
@@ -168,14 +168,13 @@ class TrafficControlEnv(gym.Env):
             self.game.move_cars()  
             self.game.check_lights()
             self.game.stop_behind_car()
-            self.game.update_waiting()
             self.game.update_score()
 
             observation = self._get_obs()
             info = self._get_info()
             
             # Consistent reward (from https://www.sciencedirect.com/science/article/pii/S0950705123001909)
-            reward = - np.sum(list(observation.values())) - int(0.01*self.game.max_wait_time())
+            reward = - np.sum(list(observation.values())[:2]) - int(8*list(observation.values())[2])
             
             if self.render_mode == "human":
                 self.render()
@@ -185,11 +184,7 @@ class TrafficControlEnv(gym.Env):
                 reward = -5000  
                 terminated = True
                 break
-            
-        # Positive reward if there is not any car waiting
-        #if np.sum(list(observation.values()))==0:
-        #    reward=25
-            
+                    
         return observation, reward, terminated, False, info
     
 

@@ -36,8 +36,8 @@ def get_movement(direction):
 class Setup:
     
     # Size of screen
-    WIDTH = 1000
-    HEIGHT = 850
+    WIDTH = 1100
+    HEIGHT = 800
 
     # Env steps for every action
     N_ENV_STEPS = 150
@@ -55,7 +55,7 @@ class Setup:
     DIST_CENTER = ROAD_WIDTH//2
     CENTER_Y = HEIGHT//2
     CENTER_X = WIDTH//2
-    NUDGE = 9.5 #5
+    NUDGE = 8.5 #5
     # NUDGE_Y = 0 # 5
     CAR_HEIGHT = 20
     CAR_WIDTH = 12
@@ -64,7 +64,7 @@ class Setup:
     MAX_CARS_WE = 2*((CENTER_X - DIST_CENTER)//CAR_HEIGHT + 1) # Needs to be changed if stopping criterium at light changed
 
     # Stop points
-    STOP_LENGTH = 24
+    STOP_LENGTH = 10
     STOP_ZONES = {
         "north": Rect(CENTER_X-DIST_CENTER, CENTER_Y-DIST_CENTER-STOP_LENGTH, DIST_CENTER, STOP_LENGTH),
         "south": Rect(CENTER_X, CENTER_Y+DIST_CENTER, DIST_CENTER, STOP_LENGTH),
@@ -129,6 +129,8 @@ class Car(pygame.sprite.Sprite):
         self.speed = Setup.CAR_SPEED
         self.driving = True
         self.waiting_time = 0
+        self.next_car = None
+        self.pass_intersection = False
 
         self.image = pygame.image.load(os.path.join(os.getcwd(), IMAGE_DIR, np.random.choice(IMAGES)))
         self.image = pygame.transform.scale(self.image, (self.width, self.height))
@@ -136,12 +138,19 @@ class Car(pygame.sprite.Sprite):
 
         self.rect = self.image.get_rect()
         self.rect.center = (self.pos.x, self.pos.y)
+            
+    def check_next_car(self):
+        if (self.next_car != False) and (not self.pass_intersection) and (Point(self.next_car.rect.center).dist(Point(self.rect.center))<= 1.18*self.height):
+            self.stop()
 
     def move(self):
         if self.driving:
             self.pos = Point(self.rect.center) +  Point(self.moving)*self.speed
             self.rect.center = (self.pos.x, self.pos.y)
-
+            self.reset_waiting()
+            if (not self.pass_intersection) and (self.is_at_intersection()):
+                self.pass_intersection = True
+ 
     def stop(self):
         self.driving = False
 
@@ -152,17 +161,17 @@ class Car(pygame.sprite.Sprite):
         self.waiting_time = 0
     
     def update_waiting(self):
-        self.waiting_time += 1
+        if not self.driving:
+            self.waiting_time += 1
 
     def draw(self, surface: pygame.display):
         surface.blit(self.image, self.rect)
-        #pygame.draw.rect(surface, Setup.BLACK, rect=rect, border_radius=min(self.height, self.width) // 2)
         
     def is_at_intersection(self):
         return Setup.INTERSECT_AREA.collidepoint(self.rect.center)
 
     def is_at_light(self):
-        return (pygame.Rect.colliderect(self.rect, Setup.STOP_ZONES[self.direction])) and (Setup.STOP_ZONES[self.direction].collidepoint(self.rect.center))
+        return pygame.Rect.colliderect(self.rect, Setup.STOP_ZONES[self.direction])
 
     def should_stop(self):
         if self.is_at_light():
@@ -173,14 +182,15 @@ class Car(pygame.sprite.Sprite):
     def is_off_screen(self):
         screen_rect = pygame.Rect(-self.width, -self.height, Setup.WIDTH+2*self.width, Setup.HEIGHT+2*self.height)
         return not pygame.Rect.colliderect(self.rect, screen_rect)
-
-
+    
 
 class Game:
     
     def __init__(self, dirs):
         self.cars_dict = {dir: pygame.sprite.Group() for dir in dirs} 
         self.lights_dict = {dir: True for dir in dirs} 
+        self.cars_dict_last = defaultdict()
+        self.dirs = dirs
         self.number_cars = 0
         self.score = 0
 
@@ -201,7 +211,19 @@ class Game:
     def add_car(self, dir):
         if not self.can_add_car(dir):
             return
-        self.cars_dict[dir].add([Car(direction=dir)])
+        next_car = Car(direction=dir)
+        
+        # same road lane
+        if dir in ["north", "south"]:
+            comp = next_car.pos.x
+        else:
+            comp = next_car.pos.y
+            
+        prec_car = self.cars_dict_last.get((dir, comp), False)
+        next_car.next_car = prec_car
+        self.cars_dict[dir].add([next_car])
+        
+        self.cars_dict_last[(dir, comp)] = next_car                
         self.number_cars += 1
         
     def set_light(self, dir, value):
@@ -257,30 +279,17 @@ class Game:
     def stop_behind_car(self):
         """
         Function that checks for every car if it should stop behind another car.
-        """
+        """       
         for dir, cars in self.cars_dict.items():
             for car in cars:
                 if car.driving:
-                    cars_in_front = list(filter(lambda x: car.pos.dot(Point(car.moving)) < x.pos.dot(Point(x.moving)), self.cars_dict[dir]))
-                    
-                    # same road lane
-                    if dir in ["north", "south"]:
-                        cars_in_front = list(filter(lambda x: car.pos.x==x.pos.x, cars_in_front))
-                    else:
-                        cars_in_front = list(filter(lambda x: car.pos.y==x.pos.y, cars_in_front))
-                    
-                    immediate_cars = sorted(cars_in_front, key=lambda x: x.pos.dot(Point(x.moving)), reverse=False)
-                    if (len(immediate_cars)>0) and (Point(car.rect.center).dist(Point(immediate_cars[0].rect.center))<= 1.15*car.height):
-                        car.stop()
+                    car.check_next_car()
         
     def update_waiting(self):
         ''' Update waiting time (for all) '''
         for direct, light_green in self.lights_dict.items():
-            if light_green:
-                self.apply_to_each_car(Car.reset_waiting, dir=direct)
-            else:
+            if not light_green:
                 self.apply_to_each_car(Car.update_waiting, dir=direct)
-                
                          
     def check_crash(self):
         """
@@ -289,7 +298,9 @@ class Game:
         for dir, car_group in self.cars_dict.items():
             if len(car_group)>0:
                 all_rest = pygame.sprite.Group()
-                all_rest.add(*[v.sprites() for k, v in self.cars_dict.items() if (k!=dir) and (len(v)>0)])
+                others_to_add = [v.sprites() for k, v in self.cars_dict.items() if (k!=dir) and (len(v)>0)]
+                others_to_add = [v for k in others_to_add for v in k if v.is_at_intersection()]
+                all_rest.add(*[others_to_add])
                 collisions = pygame.sprite.groupcollide(car_group, all_rest, False, False)
                 
                 if len(collisions)>0:
@@ -303,10 +314,20 @@ class Game:
         """
         car_group = self.cars_dict[dir]
         car = Car(direction=dir)
-        return not pygame.sprite.spritecollide(car, car_group, dokill=False )
+        
+        # same road lane
+        if dir in ["north", "south"]:
+            comp = car.pos.x
+        else:
+            comp = car.pos.y
+            
+        prec_car = self.cars_dict_last.get((dir, comp), False)       
+         
+        return (True if not prec_car else not car.rect.colliderect(prec_car.rect))    # pygame.sprite.spritecollide(car, car_group, dokill=False )
+
 
     def update_score(self):
-        for _, car_group in self.cars_dict.items():
+        for dir, car_group in self.cars_dict.items():
             for car in car_group:
                 if car.is_off_screen():
                     car_group.remove(car)
